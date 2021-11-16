@@ -1,31 +1,31 @@
 import { useEffect, useState } from "react";
 import { TweetCard } from "../../Components/TweetCard";
-import { firestore } from "./../../firebase";
+import { SessionBar } from "../../Components/SessionBar";
+
+import { firestore, auth, isLogged } from "./../../firebase";
+
+const initialTweetState = {
+  title: "",
+  description: "",
+  likesCount: null,
+  userId: null,
+};
 
 function Tweets() {
   // Estado local para los tweets que hay en firebase
   const [tweets, setTweets] = useState([]);
 
-  // Estructura del tweet que estamos creando
-  const [tweet, setTweet] = useState({
-    tweet: "",
-    autor: "",
-    likes: 0,
-  });
+  // Estructura del tweet que creamos para enviar a Firebase
+  const [tweet, setTweet] = useState(initialTweetState);
 
-  useEffect(() => {
-    const cerrarConexion = firestore
-      .collection("tweets")
-      .onSnapshot((snapshot) => {
+  // Crea la conexión para escuchar cambios en el documento de Firebase
+  const tweetsListener = () =>
+    firestore.collection("tweets").onSnapshot(
+      (snapshot) => {
         const tweets = snapshot.docs.map(
           (doc) => {
-            const { tweet, autor, likes, isLiked } = doc.data();
-            // Transformamos la data según queramos en nuestra app
             return {
-              tweet,
-              autor,
-              isLiked: isLiked ?? false,
-              likes: likes ?? 0,
+              ...doc.data(),
               id: doc.id,
             };
           },
@@ -34,31 +34,35 @@ function Tweets() {
           }
         );
         setTweets(tweets);
-      });
-    return () => {
-      // Limpiamos el listener que creamos cuando se desmonta el componente
-      cerrarConexion();
-    };
-  }, []);
+      },
+      (error) => {
+        console.error(error);
+      }
+    );
 
+  // Crea la conexión para escuchar cambios en el usuario autenticado de Firebase
+  const sessionListener = () =>
+    auth.onAuthStateChanged((user) => {
+      setTweet((tweet) => ({ ...tweet, userId: user?.uid }));
+
+      // Nos aseguramos de guardar el doc con la referencia del usuario
+      firestore
+        .collection("users")
+        .doc(user.uid)
+        .set({ name: user.displayName, email: user.email });
+    });
+
+  // Envia el tweet local a Firebase
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    const enviarTweet = firestore.collection("tweets").add(tweet);
-
-    const collRef = await enviarTweet;
-
-    const docRef = await collRef.get();
-
-    const result = docRef.data();
-
-    setTweets([result, ...tweets]);
+    try {
+      firestore.collection("tweets").add(tweet);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
-  /**
-   * Actualiza el estado local del tweet que estamos creando
-   * @param {*} e
-   */
+  // Actualiza el estado local del tweet que vamos a enviar a Firebase
   const handleChange = (e) => {
     const { value, name } = e.target;
     const newTweet = {
@@ -68,47 +72,42 @@ function Tweets() {
     setTweet(newTweet);
   };
 
-  const handleDelete = (id) => {
-    firestore.doc(`tweets/${id}`).delete();
-    // firestore.collection("tweets").doc(id).delete();
-  };
-
-  /**
-   *
-   * @param {string} id
-   * @param {number} likes
-   * @param {boolean} isLiked
-   */
-  const handleLike = (id, likes, isLiked) => {
-    firestore.doc(`tweets/${id}`).update({
-      isLiked: !isLiked,
-      likes: isLiked ? likes - 1 : likes + 1,
-    });
-  };
+  useEffect(() => {
+    const unsuscribeTweets = tweetsListener();
+    const unsuscribeSession = sessionListener();
+    return () => {
+      // Limpiamos los listeners que creamos cuando se desmonta el componente
+      unsuscribeTweets();
+      unsuscribeSession();
+    };
+  }, []);
 
   return (
-    <div className="tweets__container">
-      <form className="form-container">
-        <textarea
-          onChange={handleChange}
-          name="tweet"
-          placeholder="Tweet"
-        ></textarea>
-        <input onChange={handleChange} name="autor" placeholder="Autor"></input>
-        <button onClick={handleSubmit}>Enviar Tweet</button>
-      </form>
-      <div className="tweets__list">
-        {tweets.map((tweet) => {
-          return (
-            <TweetCard
-              tweet={tweet}
-              handleDelete={handleDelete}
-              handleLike={handleLike}
-            />
-          );
-        })}
+    <>
+      <SessionBar />
+      <div className="tweets__container">
+        <form className="form-container">
+          <input
+            onChange={handleChange}
+            name="title"
+            placeholder="Title"
+          ></input>
+          <textarea
+            onChange={handleChange}
+            name="description"
+            placeholder="Tweet"
+          ></textarea>
+          <button onClick={handleSubmit} disabled={!isLogged()}>
+            Enviar Tweet
+          </button>
+        </form>
+        <div className="tweets__list">
+          {tweets.map((tweet) => {
+            return <TweetCard key={tweet.id} tweet={tweet} />;
+          })}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
