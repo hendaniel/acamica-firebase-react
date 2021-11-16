@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { firestore, getCurrentUser } from "./../../firebase";
+import { firestore, getCurrentUser, firebase } from "./../../firebase";
 
 export function TweetCard({ tweet }) {
   const user = getCurrentUser();
@@ -20,6 +20,15 @@ export function TweetCard({ tweet }) {
   const handleDelete = () => {
     firestore.doc(`tweets/${id}`).delete();
     // firestore.collection("tweets").doc(id).delete();
+    firestore
+      .collection("likes")
+      .where("tweetId", "==", id)
+      .get()
+      .then((snapshot) => {
+        snapshot.forEach((doc) => {
+          doc.ref.delete();
+        });
+      });
   };
 
   // Actualiza el documento de relacion de likes
