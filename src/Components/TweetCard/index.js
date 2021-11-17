@@ -6,7 +6,6 @@ export function TweetCard({ tweet }) {
   const { id, likesCount, userId } = tweet;
 
   const [liked, setLiked] = useState(false);
-  const [ currentTweet, setCurrentTweet ]= useState();
 
   const checkLike = async () => {
     const doc = await firestore.doc(`likes/${user?.uid}-${tweet.id}`).get();
@@ -17,7 +16,9 @@ export function TweetCard({ tweet }) {
     }
   };
 
-
+  useEffect(()=>{
+    checkLike();
+  },[])
 
   // Borra el documento en Firebase por su id
   const handleDelete = () => {
