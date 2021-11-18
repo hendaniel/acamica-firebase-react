@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { firestore, getCurrentUser, firebase } from "./../../firebase";
+import { firestore, getCurrentUser } from "./../../firebase";
 
 export function TweetCard({ tweet }) {
   const user = getCurrentUser();
@@ -16,9 +16,9 @@ export function TweetCard({ tweet }) {
     }
   };
 
-  useEffect(()=>{
+  useEffect(() => {
     checkLike();
-  },[])
+  });
 
   // Borra el documento en Firebase por su id
   const handleDelete = () => {
@@ -51,18 +51,23 @@ export function TweetCard({ tweet }) {
     }
   };
 
-
   return (
     <div key={tweet.id} className="tweet__card">
       <p>{tweet.description}</p>
       <h4>{tweet.title}</h4>
-      { userId === user.uid? 
-          <button onClick={handleDelete}>Borrar</button>
-          : <></>
-      }
-      
+      {userId === user?.uid ? (
+        <button onClick={handleDelete}>Borrar</button>
+      ) : (
+        <></>
+      )}
 
-      <button onClick={handleLike}>{liked ? "No me gusta" : "Me gusta"}</button>
+      {user?.uid ? (
+        <button onClick={handleLike}>
+          {liked ? "No me gusta" : "Me gusta"}
+        </button>
+      ) : (
+        <></>
+      )}
       <span>{tweet.likesCount}</span>
     </div>
   );
