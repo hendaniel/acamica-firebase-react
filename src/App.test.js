@@ -1,8 +1,16 @@
-import { render, screen } from '@testing-library/react';
-import App from './App';
+import { substraction } from "./functions/math";
 
-test('renders learn react link', () => {
-  render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+test("Probando el happy path de la resta", () => {
+  const result = substraction(1, 4);
+  expect(result).toBe(-3);
+});
+
+test("Probando el edge case de la resta", () => {
+  const result = substraction(1 - 4);
+  expect(result).toBe(null);
+});
+
+test("Probando resultados negativos", () => {
+  const result = substraction(1, 4);
+  expect(result).toBeLessThan(0);
 });
