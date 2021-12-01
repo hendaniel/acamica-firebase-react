@@ -8,6 +8,7 @@ export function SessionBar() {
       {user ? (
         <div className="session-bar__user">
           <img
+            data-testid="imagen"
             className="session-bar--img"
             src={user.photoURL}
             alt=""
