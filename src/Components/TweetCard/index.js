@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { firestore, getCurrentUser } from "./../../firebase";
+import { firestore, getCurrentUser, storage } from "./../../firebase";
 
 export function TweetCard({ tweet }) {
   const user = getCurrentUser();
@@ -7,6 +7,9 @@ export function TweetCard({ tweet }) {
 
   const [liked, setLiked] = useState(false);
 
+  const [file, setFile] = useState();
+
+  const [url, setUrl] = useState();
   const checkLike = async () => {
     const doc = await firestore.doc(`likes/${user?.uid}-${tweet.id}`).get();
     const isLiked = doc.data();
@@ -51,6 +54,32 @@ export function TweetCard({ tweet }) {
     }
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    setFile(file);
+  };
+
+  const handleSendFile = () => {
+    if (!file) return;
+    const storageRef = storage.ref().child(file.name);
+    const uploadRef = storageRef.put(file);
+
+    uploadRef.on(
+      "state_changed",
+      (snapshot) => {
+        console.log(snapshot.bytesTransferred, snapshot.totalBytes);
+      },
+      (error) => {
+        console.error(error);
+      },
+      () => {
+        uploadRef.snapshot.ref.getDownloadURL().then((downloadUrl) => {
+          setUrl(downloadUrl);
+          console.log(downloadUrl);
+        });
+      }
+    );
+  };
   return (
     <div key={tweet.id} className="tweet__card">
       <p>{tweet.description}</p>
@@ -69,6 +98,20 @@ export function TweetCard({ tweet }) {
         <></>
       )}
       <span>{tweet.likesCount}</span>
+
+      <input type="file" onChange={handleFileChange}></input>
+      {file ? (
+        <button onClick={handleSendFile}>Enviar a firebase</button>
+      ) : (
+        <></>
+      )}
+      {url ? (
+        <a href={url} download>
+          Descargar archivo
+        </a>
+      ) : (
+        <></>
+      )}
     </div>
   );
 }
